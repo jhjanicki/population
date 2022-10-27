@@ -26,10 +26,6 @@ const bg = svg.append('rect')
     .attr("opacity", 0.3)
 
 
-// const parseTime = d3.timeParse("%Y-%m"),
-//     formatDate = d3.timeFormat("%Y-%m"),
-//     bisectDate = d3.bisector(d => d.timestamp).left,
-//     formatValue = d3.format(",.0f");
 
 countries.forEach(function (d) {
     d.population = +d.population || 0;
@@ -152,10 +148,7 @@ masked.selectAll("path.lineE")
             .defined((d => d.population))
             (d[1])
     })
-    .on("mouseover", (e, d, i) => {
-        console.log(d)
-    })
-
+    // .call(transition)
 
     g.append("text")
     .attr("id", "label1")
@@ -181,38 +174,15 @@ masked.selectAll("path.lineE")
 
     
 
-// masked.selectAll("path.lineP")
-// .data(countriesGroupedP)
-// .join("path")
-// .attr("class", "lineP")
-// .attr("id", d => d[0])
-// .attr("opacity", 1)
-// .attr("fill", "none")
-// .attr("stroke", d => d[0] == "WORLD" ? "#636363" : "#bdbdbd")
-// .attr("stroke-width", 2)
-// .attr("stroke-dasharray",5)
-// .attr("d", d => {
-//     return d3.line()
-//         .curve(d3.curveCardinal)
-//         .x(d => xScale(d.year))
-//         .y(d => yScale(d.population) || 0)
-//         .defined((d => d.population))
-//         (d[1])
-// })
-// .on("mouseover", (e, d, i) => {
-//     console.log(d)
-// }
-// ).call(transition);
 
 function transition(path,callback) {
     path.transition()
-        .duration(3500)
+        .duration(3000)
         .attrTween("stroke-dasharray", tweenDash)
     .on("end", callback);
 }
 
 function tweenDash() {
-    // console.log(this)
     const l = this.getTotalLength(),
         i = d3.interpolateString("0," + l, l + "," + l);
     return function (t) { return i(t) };
@@ -257,18 +227,25 @@ function handleStepEnter(response) {
 
         svg.select("#label1")
             .attr("opacity",0)
-            .transition().duration(1000)
-            .attr("opacity",1)
-            .text("China")
 
 
         svg.select("#label2")
-            .attr("opacity",0)
-            .transition().duration(1000)
             .attr("x", xScale(2021))
             .attr("y", yScale(1250000))
-            .attr("opacity",1)
-            .text("India")
+            .attr("opacity",0)
+
+            setTimeout(function () {
+                svg.select("#label1")
+                .transition().duration(1000)
+                .attr("opacity",1)
+                .text("China")
+    
+    
+            svg.select("#label2")
+                .transition().duration(1000)
+                .attr("opacity",1)
+                .text("India")
+        }, 1200);
 
         masked.selectAll(".lineE")
             .transition().duration(1000)
