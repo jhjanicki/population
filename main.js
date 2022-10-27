@@ -26,23 +26,20 @@ const bg = svg.append('rect')
     .attr("opacity", 0.3)
 
 
-// const parseTime = d3.timeParse("%Y-%m"),
-//     formatDate = d3.timeFormat("%Y-%m"),
-//     bisectDate = d3.bisector(d => d.timestamp).left,
-//     formatValue = d3.format(",.0f");
-
 countries.forEach(function (d) {
     d.population = +d.population || 0;
     d.year = +d.year || 0;
     return d;
 })
 
+//World
+const worldData = countries.filter(d => d.area == "WORLD");
 
-const countriesEstimates = countries.filter(d => d.year <= 2022);
-const countriesProjections = countries.filter(d => d.year >= 2022); //medium projection
+//countries
 
-console.log(countriesEstimates)
-console.log(countriesProjections)
+const countriesEstimates = countries.filter(d => d.area !== "WORLD" && d.year <= 2021);
+const countriesProjections = countries.filter(d => d.year > 2021); //medium projection
+
 
 const countriesGrouped = d3.group(
     countries,
@@ -65,8 +62,7 @@ const countriesGroupedP = d3.group(
 const high = world.filter(d => d.variant == "High")
 const low = world.filter(d => d.variant == "Low")
 
-console.log(high)
-console.log(low)
+
 
 //regions
 
@@ -135,40 +131,31 @@ const mask = g.append("defs")
 const masked = g.append("g")
     .attr("clip-path", "url(#mask)")
 
-masked.selectAll("path.lineE")
-    .data(countriesGroupedE)
-    .join("path")
-    .attr("class", "lineE line")
-    .attr("id", d => d[0])
-    .attr("opacity", 1)
+
+masked.append("path")
+    .datum(worldData)
+    .attr("class", "worldE line")
     .attr("fill", "none")
-    .attr("stroke", d => d[0] == "WORLD" ? "#636363" : "#bdbdbd")
+    .attr("stroke", "#67a9cf")
     .attr("stroke-width", 2)
-    .attr("d", d => {
-        return d3.line()
-            .curve(d3.curveCardinal)
-            .x(d => xScale(d.year))
-            .y(d => yScale(d.population) || 0)
-            .defined((d => d.population))
-            (d[1])
-    })
-    .on("mouseover", (e, d, i) => {
-        console.log(d)
-    })
+    .attr("d", d3.line()
+        .curve(d3.curveCardinal)
+        .x(d => xScale(d.year))
+        .y(d => yScale(d.population) || 0)
+    ).call(transition);
 
 
-    g.append("text")
+g.append("text")
     .attr("id", "label1")
     .attr("x", xScale(2021))
     .attr("y", yScale(7800000))
     .attr("fill", "black")
     .attr("text-anchor", "end")
-    .attr("opacity", 1)
+    .attr("opacity", 0)
     .attr("font-size", 20)
     .attr("dy", -10)
-    .text("World")
 
-    g.append("text")
+g.append("text")
     .attr("id", "label2")
     .attr("x", xScale(2021))
     .attr("y", yScale(1400000))
@@ -177,38 +164,21 @@ masked.selectAll("path.lineE")
     .attr("opacity", 1)
     .attr("font-size", 20)
     .attr("dy", -10)
-    .text("Countries")
+    .text("")
 
-    
 
-// masked.selectAll("path.lineP")
-// .data(countriesGroupedP)
-// .join("path")
-// .attr("class", "lineP")
-// .attr("id", d => d[0])
-// .attr("opacity", 1)
-// .attr("fill", "none")
-// .attr("stroke", d => d[0] == "WORLD" ? "#636363" : "#bdbdbd")
-// .attr("stroke-width", 2)
-// .attr("stroke-dasharray",5)
-// .attr("d", d => {
-//     return d3.line()
-//         .curve(d3.curveCardinal)
-//         .x(d => xScale(d.year))
-//         .y(d => yScale(d.population) || 0)
-//         .defined((d => d.population))
-//         (d[1])
-// })
-// .on("mouseover", (e, d, i) => {
-//     console.log(d)
-// }
-// ).call(transition);
+setTimeout(function () {
+    svg.select("#label1")
+        .transition().duration(100)
+        .attr("opacity", 1)
+        .text("World")
+}, 2200);
 
-function transition(path,callback) {
+function transition(path, callback, duration = 3500) {
     path.transition()
-        .duration(3500)
+        .duration(duration)
         .attrTween("stroke-dasharray", tweenDash)
-    .on("end", callback);
+        .on("end", callback);
 }
 
 function tweenDash() {
@@ -219,18 +189,20 @@ function tweenDash() {
 }
 
 
-function setLabelStep1(){
+
+
+function setLabelStep1() {
     svg.select("#label1")
-    .attr("x", xScale(2100))
-    .attr("y", yScale(10500000))
-    .attr("opacity",1)
-    .text("World, medium projection")
+        .attr("x", xScale(2100))
+        .attr("y", yScale(10500000))
+        .attr("opacity", 1)
+        .text("World, medium projection")
 
     svg.select("#label2")
-    .attr("x", xScale(2100))
-    .attr("y", yScale(1500000))
-    .attr("opacity",1)
-    .text("Countries, medium projection")
+        .attr("x", xScale(2100))
+        .attr("y", yScale(1500000))
+        .attr("opacity", 1)
+        .text("Countries, medium projection")
 
     //2079 around 10.4 billion peak
 }
@@ -250,28 +222,17 @@ function handleStepEnter(response) {
         $("#button").html("Next")
         $("#text").html("Population of various countries")
 
-        yScale.domain([0, 1500000]);
-        svg.select(".y-axis")
-            .transition().duration(1000)
-            .call(d3.axisLeft(yScale));
+       
 
-        svg.select("#label1")
-            .attr("opacity",0)
-            .transition().duration(1000)
-            .attr("opacity",1)
-            .text("China")
-
-
-        svg.select("#label2")
-            .attr("opacity",0)
-            .transition().duration(1000)
-            .attr("x", xScale(2021))
-            .attr("y", yScale(1250000))
-            .attr("opacity",1)
-            .text("India")
-
-        masked.selectAll(".lineE")
-            .transition().duration(1000)
+        masked.selectAll("path.lineE")
+            .data(countriesGroupedE)
+            .join("path")
+            .attr("class", "lineE line")
+            .attr("id", d => d[0])
+            .attr("opacity", 1)
+            .attr("fill", "none")
+            .attr("stroke", d => "#bdbdbd")
+            .attr("stroke-width", 2)
             .attr("d", d => {
                 return d3.line()
                     .curve(d3.curveCardinal)
@@ -279,12 +240,8 @@ function handleStepEnter(response) {
                     .y(d => yScale(d.population) || 0)
                     .defined((d => d.population))
                     (d[1])
-            });
-
-
-
-
-      
+            })
+            .call(transition);
 
 
     }
@@ -292,6 +249,56 @@ function handleStepEnter(response) {
 
 
     if (response == 1) {
+
+        $("#button").html("Next")
+        $("#text").html("Population of various countries")
+
+        d3.select(".worldE").attr("opacity", 0)
+
+        yScale.domain([0, 1500000]);
+        svg.select(".y-axis")
+            .transition().duration(1000)
+            .call(d3.axisLeft(yScale));
+
+
+        // svg.select("#label1")
+        //     .attr("opacity", 0)
+
+
+        // svg.select("#label2")
+        //     .attr("opacity", 0)
+        //     .attr("x", xScale(2021))
+        //     .attr("y", yScale(1250000))
+
+        // setTimeout(function () {
+        //     svg.select("#label1")
+        //         .transition().duration(100)
+        //         .attr("opacity", 1)
+        //         .text("China")
+        //         svg.select("#label2")
+        //         .transition().duration(100)
+        //         .attr("opacity", 1)
+        //         .text("India")
+        // }, 500);
+
+        masked.selectAll(".lineE")
+            .transition().duration(2500)
+            .attr("d", d => {
+                return d3.line()
+                    .curve(d3.curveCardinal)
+                    .x(d => xScale(d.year))
+                    .y(d => yScale(d.population) || 0)
+                    .defined((d => d.population))
+                    (d[1])
+            })
+
+    }
+
+    
+
+    if (response == 2) {
+
+        
 
         $("#text").html("Projected world / country population until 2100")
 
@@ -305,6 +312,15 @@ function handleStepEnter(response) {
             .transition().duration(1000)
             .call(d3.axisBottom(xScale).tickFormat(d => +d));
 
+            masked.select(".worldE")
+        .transition().duration(1000)
+        .attr("d", d3.line()
+        .curve(d3.curveCardinal)
+        .x(d => xScale(d.year))
+        .y(d => yScale(d.population) || 0)
+        )
+        .attr("opacity", 1)
+
         masked.selectAll(".lineE")
             .transition().duration(1000)
             .attr("d", d => {
@@ -317,9 +333,9 @@ function handleStepEnter(response) {
 
             });
 
-        svg.select("#label1").attr("opacity",0);
-        svg.select("#label2").attr("opacity",0);
-            
+        svg.select("#label1").attr("opacity", 0);
+        svg.select("#label2").attr("opacity", 0);
+
 
         masked.selectAll("path.lineP")
             .data(countriesGroupedP)
@@ -339,15 +355,12 @@ function handleStepEnter(response) {
                     .defined((d => d.population))
                     (d[1])
             })
-            .on("mouseover", (e, d, i) => {
-                console.log(d)
-            })
-            .call(transition,setLabelStep1); 
+            .call(transition, setLabelStep1);
 
 
     }
 
-    if (response == 2) {
+    if (response == 3) {
 
         masked.append("path")
             .datum(low)
@@ -379,9 +392,9 @@ function handleStepEnter(response) {
     }
 
 
-    if (response == 3) {
+    if (response == 4) {
 
-        svg.select("#label1").attr("opacity",0);
+        svg.select("#label1").attr("opacity", 0);
 
 
         yScale.domain([0, 2000000]);
@@ -426,9 +439,9 @@ function handleStepEnter(response) {
     }
 
 
-    if (response == 4) {
+    if (response == 5) {
 
-        svg.select("#label1").attr("opacity",0);
+        svg.select("#label1").attr("opacity", 0);
 
         yScale.domain([0, 3500000]);
         svg.select(".y-axis")
