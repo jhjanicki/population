@@ -1,17 +1,17 @@
 const figure = d3.selectAll(".chart");
 
 // console.log(figure.node().getBoundingClientRect())
-let width = 1920 / 1.7;
+let width = 1920 / 1.4;
 //figure.node().getBoundingClientRect().width;
-let height = 1080 / 1.7;
+let height = 1080 / 1.4;
 //figure.node().getBoundingClientRect().height;
 
 
 const margin = {
-    "top": 60,
-    "left": 100,
-    "bottom": 85,
-    "right": 40
+    "top": (0+84)/1.4,
+    "left": (70+84)/1.4,
+    "bottom": (85+84)/1.4,
+    "right": (0+84)/1.4
 }
 
 
@@ -26,25 +26,31 @@ const bg = svg.append('rect')
     .attr("opacity", 0.3)
 
 
-countries.forEach(function (d) {
+countries.forEach(function(d) {
     d.population = +d.population || 0;
     d.year = +d.year || 0;
     return d;
 })
 
 //World
-const worldData = countries.filter(d => d.area == "WORLD");
+const worldData = countries.filter(d => d.area == "WORLD" && d.year <= 2022);
+
+//get high and low projections here
+
+const high = world.filter(d => d.variant == "High")
+const low = world.filter(d => d.variant == "Low")
+
+//regions
+
+const regionsProjected = d3.group(
+    regions,
+    d => d.area
+)
 
 //countries
 
-const countriesEstimates = countries.filter(d => d.area !== "WORLD" && d.year <= 2021);
+const countriesEstimates = countries.filter(d => d.area !== "WORLD" && d.year <= 2022);
 const countriesProjections = countries.filter(d => d.year > 2021); //medium projection
-
-
-const countriesGrouped = d3.group(
-    countries,
-    d => d.area
-)
 
 const countriesGroupedE = d3.group(
     countriesEstimates,
@@ -56,20 +62,51 @@ const countriesGroupedP = d3.group(
     d => d.area
 )
 
+// Africa
 
-//get high and low projections here
+const africaE = countries.filter(d => d.region === "Africa" && d.year <= 2022);
+const africaP = countries.filter(d => d.region === "Africa" && d.year > 2021);
 
-const high = world.filter(d => d.variant == "High")
-const low = world.filter(d => d.variant == "Low")
-
-
-
-//regions
-
-const regionsProjected = d3.group(
-    regions,
+const africaGroupedE = d3.group(
+    africaE,
     d => d.area
 )
+
+const africaGroupedP = d3.group(
+    africaP,
+    d => d.area
+)
+
+const africaSubregions = subregions.filter(d => d.region === "Africa");
+
+const africaSubregionsGrouped = d3.group(
+    africaSubregions,
+    d => d.area
+)
+
+
+// Europe
+
+const europeE = countries.filter(d => d.region === "Europe" && d.year <= 2022);
+const europeP = countries.filter(d => d.region === "Europe" && d.year > 2021);
+
+const europeGroupedE = d3.group(
+    europeE,
+    d => d.area
+)
+
+const europeGroupedP = d3.group(
+    europeP,
+    d => d.area
+)
+
+const EUSubregions = subregions.filter(d => d.region === "Europe");
+
+const EUSubregionsGrouped = d3.group(
+    EUSubregions,
+    d => d.area
+)
+
 
 let countriesList = countries.map(obj => obj.area);
 countriesList = countriesList.filter((v, i) => countriesList.indexOf(v) == i);
@@ -82,24 +119,6 @@ const xScale = d3.scaleTime()
 const yScale = d3.scaleLinear()
     .domain([0, 8000000])
     .range([height - margin.bottom, 0]);
-
-
-
-
-
-// const bread2021 = bread.filter(d => d.timestamp > parseTime("2021-07"))
-// const bread2021Grouped = d3.group(
-//     bread2021,
-//     d => d.country
-// )
-
-
-// const zScale = d3.scaleSequential()
-//     .domain([0, countriesGrouped.size])
-//     .interpolator(d3.interpolateRainbow);
-
-// const mapCountryToIndex = d3.scaleOrdinal().domain(countriesList).range([...Array(countriesGrouped.size).keys()]);
-
 
 
 let xAxis = d3.axisBottom(xScale).tickFormat(d => +d);
@@ -132,18 +151,52 @@ const masked = g.append("g")
     .attr("clip-path", "url(#mask)")
 
 
+    // masked.append("linearGradient")
+    // .attr("id", "line-gradient")
+    // .attr("gradientUnits", "userSpaceOnUse")
+    // .attr("x1", 0)
+    // .attr("y1", y(0))
+    // .attr("x2", 0)
+    // .attr("y2", y(max))
+    // .selectAll("stop")
+    //   .data([
+    //     {offset: "0%", color: "blue"},
+    //     {offset: "100%", color: "red"}
+    //   ])
+    // .enter().append("stop")
+    //   .attr("offset", function(d) { return d.offset; })
+    //   .attr("stop-color", function(d) { return d.color; });
+
+
 masked.append("path")
     .datum(worldData)
-    .attr("class", "worldE line")
+    .attr("class", "worldE")
     .attr("fill", "none")
-    .attr("stroke", "#67a9cf")
+    .attr("stroke", "#636363")
     .attr("stroke-width", 2)
     .attr("d", d3.line()
         .curve(d3.curveCardinal)
         .x(d => xScale(d.year))
         .y(d => yScale(d.population) || 0)
-    ).call(transition);
+    )
 
+masked.selectAll("path.lineE")
+    .data(countriesGroupedE)
+    .join("path")
+    .attr("class", "lineE line")
+    .attr("id", d => d[0]+"_E")
+    .attr("opacity", 1)
+    .attr("fill", "none")
+    .attr("stroke", d => "#bdbdbd")
+    .attr("stroke-width", 2)
+    .attr("d", d => {
+        return d3.line()
+            .curve(d3.curveCardinal)
+            .x(d => xScale(d.year))
+            .y(d => yScale(d.population) || 0)
+            .defined((d => d.population))
+            (d[1])
+    })
 
 g.append("text")
     .attr("id", "label1")
@@ -166,13 +219,22 @@ g.append("text")
     .attr("dy", -10)
     .text("")
 
+g.append("text")
+    .attr("id", "label3")
+    .attr("x", xScale(2021))
+    .attr("y", yScale(1400000))
+    .attr("fill", "black")
+    .attr("text-anchor", "end")
+    .attr("opacity", 0)
+    .attr("font-size", 20)
+    .attr("dy", -10)
+    .text("")
 
-setTimeout(function () {
-    svg.select("#label1")
-        .transition().duration(100)
-        .attr("opacity", 1)
-        .text("World")
-}, 2200);
+
+svg.select("#label1")
+    .transition().duration(100)
+    .attr("opacity", 1)
+    .text("World")
 
 function transition(path, callback, duration = 3500) {
     path.transition()
@@ -185,7 +247,9 @@ function tweenDash() {
     // console.log(this)
     const l = this.getTotalLength(),
         i = d3.interpolateString("0," + l, l + "," + l);
-    return function (t) { return i(t) };
+    return function(t) {
+        return i(t)
+    };
 }
 
 
@@ -210,45 +274,16 @@ function setLabelStep1() {
 
 let step = 0;
 
-$("#button").on("click", function () {
+$("#button").on("click", function() {
     handleStepEnter(step);
     step++;
 })
 
 function handleStepEnter(response) {
 
+
+
     if (response == 0) {
-
-        $("#button").html("Next")
-        $("#text").html("Population of various countries")
-
-       
-
-        masked.selectAll("path.lineE")
-            .data(countriesGroupedE)
-            .join("path")
-            .attr("class", "lineE line")
-            .attr("id", d => d[0])
-            .attr("opacity", 1)
-            .attr("fill", "none")
-            .attr("stroke", d => "#bdbdbd")
-            .attr("stroke-width", 2)
-            .attr("d", d => {
-                return d3.line()
-                    .curve(d3.curveCardinal)
-                    .x(d => xScale(d.year))
-                    .y(d => yScale(d.population) || 0)
-                    .defined((d => d.population))
-                    (d[1])
-            })
-            .call(transition);
-
-
-    }
-
-
-
-    if (response == 1) {
 
         $("#button").html("Next")
         $("#text").html("Population of various countries")
@@ -260,29 +295,27 @@ function handleStepEnter(response) {
             .transition().duration(1000)
             .call(d3.axisLeft(yScale));
 
+        svg.select("#label1")
+            .attr("opacity", 0)
 
-        // svg.select("#label1")
-        //     .attr("opacity", 0)
+        svg.select("#label2")
+            .attr("opacity", 0)
+            .attr("x", xScale(2021))
+            .attr("y", yScale(1250000))
 
-
-        // svg.select("#label2")
-        //     .attr("opacity", 0)
-        //     .attr("x", xScale(2021))
-        //     .attr("y", yScale(1250000))
-
-        // setTimeout(function () {
-        //     svg.select("#label1")
-        //         .transition().duration(100)
-        //         .attr("opacity", 1)
-        //         .text("China")
-        //         svg.select("#label2")
-        //         .transition().duration(100)
-        //         .attr("opacity", 1)
-        //         .text("India")
-        // }, 500);
+        setTimeout(function() {
+            svg.select("#label1")
+                .transition().duration(100)
+                .attr("opacity", 1)
+                .text("China")
+            svg.select("#label2")
+                .transition().duration(100)
+                .attr("opacity", 1)
+                .text("India")
+        }, 500);
 
         masked.selectAll(".lineE")
-            .transition().duration(2500)
+            .transition().duration(1000)
             .attr("d", d => {
                 return d3.line()
                     .curve(d3.curveCardinal)
@@ -294,13 +327,11 @@ function handleStepEnter(response) {
 
     }
 
-    
 
-    if (response == 2) {
 
-        
+    if (response == 1) {
 
-        $("#text").html("Projected world / country population until 2100")
+        $("#text").html("Projected world / country population until 2100 (medium-level)")
 
         yScale.domain([0, 15000000]);
         svg.select(".y-axis")
@@ -312,14 +343,14 @@ function handleStepEnter(response) {
             .transition().duration(1000)
             .call(d3.axisBottom(xScale).tickFormat(d => +d));
 
-            masked.select(".worldE")
-        .transition().duration(1000)
-        .attr("d", d3.line()
-        .curve(d3.curveCardinal)
-        .x(d => xScale(d.year))
-        .y(d => yScale(d.population) || 0)
-        )
-        .attr("opacity", 1)
+        masked.select(".worldE")
+            .transition().duration(1000)
+            .attr("d", d3.line()
+                .curve(d3.curveCardinal)
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.population) || 0)
+            )
+            .attr("opacity", 1)
 
         masked.selectAll(".lineE")
             .transition().duration(1000)
@@ -341,7 +372,7 @@ function handleStepEnter(response) {
             .data(countriesGroupedP)
             .join("path")
             .attr("class", "lineP line")
-            .attr("id", d => d[0])
+            .attr("id", d => d[0]+"_P")
             .attr("opacity", 1)
             .attr("fill", "none")
             .attr("stroke", d => d[0] == "WORLD" ? "#e34a33" : "#fdbb84")
@@ -357,10 +388,30 @@ function handleStepEnter(response) {
             })
             .call(transition, setLabelStep1);
 
+            masked.selectAll("path.lineE")
+    .data(countriesGroupedE)
+    .join("path")
+    .attr("class", "lineE line")
+    .attr("id", d => d[0]+"_E")
+    .attr("opacity", 1)
+    .attr("fill", "none")
+    .attr("stroke", d => "#bdbdbd")
+    .attr("stroke-width", 2)
+    .attr("d", d => {
+        return d3.line()
+            .curve(d3.curveCardinal)
+            .x(d => xScale(d.year))
+            .y(d => yScale(d.population) || 0)
+            .defined((d => d.population))
+            (d[1])
+    })
+
 
     }
 
-    if (response == 3) {
+    if (response == 2) {
+
+        $("#text").html("High and low projections for world")
 
         masked.append("path")
             .datum(low)
@@ -392,10 +443,31 @@ function handleStepEnter(response) {
     }
 
 
-    if (response == 4) {
+    if (response == 3) {
 
-        svg.select("#label1").attr("opacity", 0);
+        $("#text").html("India is projected to surpass China in 2023 to become the world's most populous country")
 
+        svg.select("#label1")
+            .attr("opacity", 0)
+            .attr("x", xScale(2100))
+            .attr("y", yScale(6000000))
+
+
+        svg.select("#label2")
+            .attr("opacity", 0)
+            .attr("x", xScale(2100))
+            .attr("y", yScale(11500000))
+
+        setTimeout(function() {
+            svg.select("#label1")
+                .transition().duration(100)
+                .attr("opacity", 1)
+                .text("China")
+            svg.select("#label2")
+                .transition().duration(100)
+                .attr("opacity", 1)
+                .text("India")
+        }, 500);
 
         yScale.domain([0, 2000000]);
         svg.select(".y-axis")
@@ -403,6 +475,13 @@ function handleStepEnter(response) {
             .call(d3.axisLeft(yScale));
 
 
+        masked.select(".worldE")
+            .transition().duration(1000)
+            .attr("d", d3.line()
+                .curve(d3.curveCardinal)
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.population) || 0)
+            )
         masked.selectAll(".line")
             .transition().duration(1000)
             .attr("d", d => {
@@ -412,60 +491,68 @@ function handleStepEnter(response) {
                     .y(d => yScale(d.population) || 0)
                     .defined((d => d.population))
                     (d[1])
-
             });
 
+        masked.append("circle")
+        .attr("id","circle1")
+        .attr("opacity",0)
+        .attr("cx",xScale(2023))
+        .attr("cy",yScale(1420000))
+        .attr("r",10)
+        .attr("stroke","black")
+        .attr("stroke-width",1)
+        .attr("stroke-dasharray",3)
+        .attr("fill","none")
 
+        setTimeout(function() {
+            svg.select("#circle1")
+                .transition().duration(100)
+                .attr("opacity", 1)
+        }, 1000);
 
+        setTimeout(function() {
 
-        // setTimeout(function () {
-        //     console.log("test")
-        //     g.select("#Hungary").raise();
-        //     g.select("#Hungary")
-        //         .transition().duration(1000)
-        //         .attr("stroke", zScale(mapCountryToIndex("Hungary")))
-        //         .attr("stroke-width", 5)
-        //         .on("end", function () {
-        //             d3.select("#label")
-        //                 .text("Hungary, 226.59")
-        //                 .transition().duration(1000)
-        //                 .attr("opacity", 1)
-        //                 .attr("y", yScale(226.59))
-        //         })
+                svg.select("#label3")
+                .attr("x",xScale(2023))
+                .attr("y",yScale(1440000))
+                .transition().duration(100)
+                .attr("opacity", 1)
+                .text("India surpasses China")
+        }, 1500);
 
-        // }, 1200);
+        //1422027
 
 
     }
 
 
-    if (response == 5) {
+    if (response == 4) {
 
-        svg.select("#label1").attr("opacity", 0);
+        $("#text").html("Current and projected growth by region. Africa is projected to grow the fastest")
 
-        yScale.domain([0, 3500000]);
+        yScale.domain([0, 6000000]);
         svg.select(".y-axis")
             .transition().duration(1000)
             .call(d3.axisLeft(yScale));
 
+        svg.select("#label1")
+        .attr("opacity", 0)
+        .attr("x", xScale(2100))
+        .attr("y", yScale(3500000))
+        svg.select("#label2").attr("opacity", 0);
+        svg.select("#label3").attr("opacity", 0);
+        svg.select("#circle1").attr("opacity", 0);
+
+
 
         masked.selectAll(".line")
-            .transition().duration(1000)
-            .attr("d", d => {
-                return d3.line()
-                    .curve(d3.curveCardinal)
-                    .x(d => xScale(d.year))
-                    .y(d => yScale(d.population) || 0)
-                    .defined((d => d.population))
-                    (d[1])
-
-            });
+            .transition().duration(1000).attr("opacity",0)
 
         masked.selectAll("path.lineRegions")
             .data(regionsProjected)
             .join("path")
-            .attr("class", "lineRegions line")
-            .attr("id", d => d[0])
+            .attr("class", "lineRegions")
+            .attr("id", d => d[0].replaceAll(" ","-"))
             .attr("opacity", 1)
             .attr("fill", "none")
             .attr("stroke", "#c51b8a")
@@ -483,6 +570,307 @@ function handleStepEnter(response) {
                 console.log(d)
             })
             .call(transition);
+
+
+            setTimeout(function() {
+                svg.select("#label1")
+                    .transition().duration(100)
+                    .attr("opacity", 1)
+                    .text("Africa")
+                svg.selectAll(".lineRegions")
+                .attr("stroke-width",0.5);
+                svg.select("#AFRICA").attr("stroke-width",2);
+            }, 3500);
+            
+
+        // how to create labels for regions?
+        // masked.selectAll("text.textRegions")
+        //     .data(regionsProjected)
+        //     .join("text")
+        //     .attr("class", "textRegions")
+        //     .attr("y",d=>d
+
+             // this part is to deal with the bug
+
+        svg.selectAll(".lineP, .lineE").remove();
+
+    }
+
+    if (response == 5) {
+//
+        svg.selectAll(".lineRegions").attr("opacity",0).remove();
+        svg.select("#label1").attr("opacity", 0)
+
+        $("#text").html("Subregions of Africa")
+
+        yScale.domain([0, 1500000]);
+        svg.select(".y-axis")
+            .transition().duration(1000)
+            .call(d3.axisLeft(yScale));
+
+
+        masked.selectAll(".line")
+            .transition().duration(1000).attr("opacity",0)
+
+        masked.selectAll("path.lineAfsubregions")
+            .data(africaSubregionsGrouped)
+            .join("path")
+            .attr("class", "lineAfsubregions")
+            .attr("id", d => d[0].replaceAll(" ","-"))
+            .attr("opacity", 1)
+            .attr("fill", "none")
+            .attr("stroke", "#c51b8a")
+            .attr("stroke-width", 2)
+            // .attr("stroke-dasharray",5)
+            .attr("d", d => {
+                return d3.line()
+                    .curve(d3.curveCardinal)
+                    .x(d => xScale(d.year))
+                    .y(d => yScale(d.population) || 0)
+                    .defined((d => d.population))
+                    (d[1])
+            })
+            .on("mouseover", (e, d, i) => {
+                console.log(d)
+            })
+            .call(transition);
+
+
+    }
+
+    if (response == 6) {
+
+        svg.selectAll(".lineAfsubregions").attr("opacity",0).remove();
+        masked.selectAll("path.lineAfricaP")
+        .data(africaGroupedP)
+        .join("path")
+        .attr("class", "lineAfricaP line")
+        .attr("id", d => d[0]+"_P")
+        .attr("opacity", 0)
+        .attr("fill", "none")
+        .attr("stroke", d => d[0] == "WORLD" ? "#e34a33" : "#fdbb84")
+        .attr("stroke-width", 2)
+        // .attr("stroke-dasharray",5)
+        .attr("d", d => {
+            return d3.line()
+                .curve(d3.curveCardinal)
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.population) || 0)
+                .defined((d => d.population))
+                (d[1])
+        })
+
+        masked.selectAll("path.lineAfricaE")
+        .data(africaGroupedE)
+        .join("path")
+        .attr("class", "lineAfricaE line")
+        .attr("id", d => d[0]+"_E")
+        .attr("opacity", 0)
+        .attr("fill", "none")
+        .attr("stroke", d => "#bdbdbd")
+        .attr("stroke-width", 2)
+        .attr("d", d => {
+            return d3.line()
+                .curve(d3.curveCardinal)
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.population) || 0)
+                .defined((d => d.population))
+                (d[1])
+        })
+
+        $("#text").html("Nigeria is the most populous country in Africa, its population will grow until 2050")
+        
+        svg.select("#label1")
+        .attr("opacity", 0)
+
+        masked.selectAll(".lineRegions")
+            .transition().duration(1000).attr("opacity",0).remove()
+
+        yScale.domain([0, 600000]);
+        svg.select(".y-axis")
+            .transition().duration(1000)
+            .call(d3.axisLeft(yScale));
+
+        masked.selectAll(".line")
+            .on("mouseover",(e,d)=>console.log(d))
+            .transition().duration(1000)
+            .attr("opacity",1)
+            .attr("d", d => {
+                return d3.line()
+                    .curve(d3.curveCardinal)
+                    .x(d => xScale(d.year))
+                    .y(d => yScale(d.population) || 0)
+                    .defined((d => d.population))
+                    (d[1])
+            });
+
+        setTimeout(function() {
+
+            svg.selectAll(".line")
+                .attr("stroke-width",0.5);
+
+            svg.selectAll("#Nigeria_E,#Nigeria_P")
+                .attr("stroke-width",3);
+
+            svg.select("#label1")
+                .attr("x",xScale(2100))
+                .attr("y",yScale(550000))
+                .attr("opacity", 1)
+                .text("Nigeria")
+            
+        }, 500);
+
+
+    }
+
+    if (response == 7) {
+
+        $("#text").html("Current and projected growth by region. Europe is declining.")
+
+        svg.selectAll(".lineAfricaE, .lineAfricaP")
+        .attr("opacity",0)
+        .remove();
+
+        yScale.domain([0, 6000000]);
+        svg.select(".y-axis")
+            .transition().duration(1000)
+            .call(d3.axisLeft(yScale));
+
+        svg.select("#label1")
+        .attr("opacity", 0)
+        .attr("x", xScale(2100))
+        .attr("y", yScale(3500000))
+        svg.select("#label2").attr("opacity", 0);
+        svg.select("#label3").attr("opacity", 0);
+        svg.select("#circle1").attr("opacity", 0);
+
+
+        masked.selectAll("path.lineRegions")
+            .data(regionsProjected)
+            .join("path")
+            .attr("class", "lineRegions")
+            .attr("id", d => d[0].replaceAll(" ","-"))
+            .attr("opacity", 0)
+            .attr("fill", "none")
+            .attr("stroke", "#c51b8a")
+            .attr("stroke-width", 2)
+            // .attr("stroke-dasharray",5)
+            .attr("d", d => {
+                return d3.line()
+                    .curve(d3.curveCardinal)
+                    .x(d => xScale(d.year))
+                    .y(d => yScale(d.population) || 0)
+                    .defined((d => d.population))
+                    (d[1])
+            })
+            .on("mouseover", (e, d, i) => {
+                console.log(d)
+            })
+            .transition().duration(1000)
+            .attr("opacity", 1)
+            
+
+
+            // setTimeout(function() {
+            //     svg.select("#label1")
+            //         .transition().duration(100)
+            //         .attr("opacity", 1)
+            //         .text("Africa")
+            //     svg.selectAll(".lineRegions")
+            //     .attr("stroke-width",0.5);
+            //     svg.select("#AFRICA").attr("stroke-width",2);
+            // }, 3500);
+        
+
+    }
+
+    if (response == 8) {
+
+        $("#text").html("Europe is delining, for example Bulgaria")
+
+        masked.selectAll("path.lineEuropeP")
+        .data(europeGroupedP)
+        .join("path")
+        .attr("class", "lineEuropeP line")
+        .attr("id", d => d[0]+"_P")
+        .attr("opacity", 1)
+        .attr("fill", "none")
+        .attr("stroke", d => d[0] == "WORLD" ? "#e34a33" : "#fdbb84")
+        .attr("stroke-width", 2)
+        .attr("d", d => {
+            return d3.line()
+                .curve(d3.curveCardinal)
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.population) || 0)
+                .defined((d => d.population))
+                (d[1])
+        })
+
+        masked.selectAll("path.lineEuropeE")
+        .data(europeGroupedE)
+        .join("path")
+        .attr("class", "lineEuropeE line")
+        .attr("id", d => d[0]+"_E")
+        .attr("opacity", 1)
+        .attr("fill", "none")
+        .attr("stroke", d => "#bdbdbd")
+        .attr("stroke-width", 2)
+        .attr("d", d => {
+            return d3.line()
+                .curve(d3.curveCardinal)
+                .x(d => xScale(d.year))
+                .y(d => yScale(d.population) || 0)
+                .defined((d => d.population))
+                (d[1])
+        })
+
+
+        yScale.domain([0, 150000]);
+        svg.select(".y-axis")
+            .transition().duration(1000)
+            .call(d3.axisLeft(yScale));
+
+
+            masked.selectAll(".line")
+            .transition().duration(1000)
+            .attr("opacity",1)
+            .attr("d", d => {
+                return d3.line()
+                    .curve(d3.curveCardinal)
+                    .x(d => xScale(d.year))
+                    .y(d => yScale(d.population) || 0)
+                    .defined((d => d.population))
+                    (d[1])
+            });
+
+
+
+        $("#text").html("Europe")
+        
+        svg.select("#label1")
+        .attr("opacity", 0)
+
+
+        setTimeout(function() {
+
+            svg.selectAll(".line")
+                .attr("stroke-width",0.5);
+
+            svg.selectAll("#Bulgaria_E,#Bulgaria_P")
+                .attr("stroke-width",5);
+
+            svg.select("#label1")
+
+                .attr("x",xScale(2100))
+                .attr("y",yScale(5000))
+                .attr("opacity", 1)
+                .text("Bulgaria")
+
+            
+        }, 500);
+
+
+
     }
 
 }
@@ -490,7 +878,7 @@ function handleStepEnter(response) {
 
 function wrap(text, width) {
     console.log("wrap")
-    text.each(function () {
+    text.each(function() {
         var text = d3.select(this),
             words = text.text().split(/\s+/).reverse(),
             word,
